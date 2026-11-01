@@ -1,5 +1,10 @@
 
 pipeline {
+    options {
+        // Prevent Jenkins from checking out the repository twice
+        skipDefaultCheckout(true)
+    }
+
     agent {
         label 'ubuntu'
     }
@@ -16,11 +21,16 @@ pipeline {
         stage('Verify Python') {
             steps {
                 sh '''
-                    echo "Checking Python version"
+                    echo "========== PYTHON VERSION =========="
                     python3 --version
 
-                    echo "Checking pip version"
+                    echo ""
+                    echo "========== PIP VERSION =========="
                     python3 -m pip --version
+
+                    echo ""
+                    echo "========== GIT VERSION =========="
+                    git --version
                 '''
             }
         }
@@ -28,8 +38,16 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
+                    echo "Creating CI virtual environment"
+
                     python3 -m venv .ci-venv
+
+                    echo "Upgrading pip"
+
                     .ci-venv/bin/python -m pip install --upgrade pip
+
+                    echo "Installing project dependencies"
+
                     .ci-venv/bin/python -m pip install -r requirements.txt
                 '''
             }
@@ -38,6 +56,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
+                    echo "========== RUNNING PYTHON TESTS =========="
+
                     .ci-venv/bin/python -m pytest -v
                 '''
             }
