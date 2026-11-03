@@ -110,11 +110,79 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy Docker Container') {
+            steps {
+                sh '''
+                    echo "========== DEPLOYING APPLICATION =========="
+
+                    # Remove only the previous test deployment, if present
+                    if docker ps -a --format '{{.Names}}' | grep -Fxq 'devops-flask-app-test'; then
+                        docker rm -f devops-flask-app-test
+                    fi
+
+                    # Start the newly built image
+                    docker run -d \
+                        --name devops-flask-app-test \
+                        -p 5002:5000 \
+                        devops-cicd-platform:${BUILD_NUMBER}
+
+                    echo "Container deployment command completed"
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    echo "========== VERIFYING APPLICATION HEALTH =========="
+
+                    for attempt in $(seq 1 15); do
+                        if .ci-venv/bin/python -c '
+import urllib.request
+response = urllib.request.urlopen(
+    "http://localhost:5002/health",
+    timeout=3
+)
+print(response.read().decode())
+assert response.status == 200
+'; then
+                            echo "Health check passed"
+                            break
+                        fi
+
+                        echo "Application not ready yet. Attempt: $attempt"
+                        sleep 2
+
+                        if [ "$attempt" -eq 15 ]; then
+                            echo "Deployment health check failed"
+                            docker logs devops-flask-app-test
+                            exit 1
+                        fi
+                    done
+
+                    echo ""
+                    echo "========== VERIFYING HOMEPAGE =========="
+
+                    .ci-venv/bin/python -c '
+import urllib.request
+response = urllib.request.urlopen(
+    "http://localhost:5002/",
+    timeout=5
+)
+print(response.read().decode())
+assert response.status == 200
+'
+
+                    echo "Deployment verification successful"
+                '''
+            }
+        }
     }
 
     post {
         always {
-            echo 'CI pipeline execution completed'
+            echo 'CI/CD pipeline execution completed'
         }
 
         success {
