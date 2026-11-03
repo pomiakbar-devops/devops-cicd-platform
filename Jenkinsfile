@@ -62,6 +62,23 @@ pipeline {
                 '''
             }
         }
+
+        stage('Verify Docker Access') {
+            steps {
+                sh '''
+                    echo "========== JENKINS USER =========="
+                    id
+
+                    echo ""
+                    echo "========== DOCKER VERSION =========="
+                    docker version
+
+                    echo ""
+                    echo "========== RUNNING CONTAINERS =========="
+                    docker ps
+                '''
+            }
+        }
     }
 
     post {
