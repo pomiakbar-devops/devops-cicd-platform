@@ -79,6 +79,37 @@ pipeline {
                 '''
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    echo "========== BUILDING DOCKER IMAGE =========="
+
+                    docker build \
+                        -t devops-cicd-platform:${BUILD_NUMBER} \
+                        -t devops-cicd-platform:latest \
+                        .
+
+                    echo "Docker image build completed"
+                '''
+            }
+        }
+
+        stage('Verify Docker Image') {
+            steps {
+                sh '''
+                    echo "========== VERIFYING DOCKER IMAGE =========="
+
+                    docker image inspect \
+                        devops-cicd-platform:${BUILD_NUMBER}
+
+                    echo ""
+                    echo "========== AVAILABLE PROJECT IMAGES =========="
+
+                    docker images devops-cicd-platform
+                '''
+            }
+        }
     }
 
     post {
